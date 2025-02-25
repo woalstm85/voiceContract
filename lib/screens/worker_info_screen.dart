@@ -315,14 +315,18 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.indigo,
         centerTitle: true,
         title: const Text(
           '근로자 정보',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            fontSize: 22,
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -384,7 +388,7 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
                 ),
                 const SizedBox(width: 16),
                 FloatingActionButton(
-                  backgroundColor: Colors.indigo,
+                  backgroundColor: Colors.teal,
                   onPressed: _toggleListening,
                   child: Icon(_isRecording ? Icons.mic_off : Icons.mic, color: Colors.white),
                 ),

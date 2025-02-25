@@ -47,91 +47,107 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
   }
 
   Widget _buildInfoSection(String title, String content, bool showSpeakButton) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              title,  // 타이틀 (항상 한글)
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.volume_up_rounded, color: Colors.orangeAccent),
-              onPressed: () => _speak(title),  // 타이틀 읽기
-              tooltip: "제목 읽기",
-              iconSize: 20,
-            ),
-          ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.indigo.withOpacity(0.5),
+          width: 1.5,
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.indigoAccent),
-            borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.indigo.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 3),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Text(
-                  content,
-                  style: const TextStyle(fontSize: 18),
-                ),
-              ),
-              if (showSpeakButton)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8), // 아이콘과 텍스트 간격 조정
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      border: Border.all(color: Colors.indigoAccent, width: 1),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.volume_up_rounded, color: Colors.green),
-                      onPressed: () => _speak(content),
-                      tooltip: "내용 읽기",
-                      iconSize: 20,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo,
                     ),
                   ),
                 ),
-            ],
-          ),
+                IconButton(
+                  icon: Icon(Icons.volume_up_rounded, color: Colors.indigo[300]),
+                  onPressed: () => _speak(title),
+                  tooltip: "제목 읽기",
+                  iconSize: 24,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    content,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                if (showSpeakButton)
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.indigo[50],
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.volume_up_rounded, color: Colors.indigo[400]),
+                      onPressed: () => _speak(content),
+                      tooltip: "내용 읽기",
+                      iconSize: 20,
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
-        const SizedBox(height: 24),
-      ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.indigo[50],
       appBar: AppBar(
         centerTitle: true,
-        backgroundColor: Colors.white,
-        title: Text('근로계약서 작성내용',
-          style: const TextStyle(color: Colors.black),
+        backgroundColor: Colors.indigo,
+        title: const Text(
+          '근로계약서 작성내용',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.home, color: Colors.black),
+            icon: const Icon(Icons.home, color: Colors.white),
             onPressed: () {
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
@@ -233,88 +249,76 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
 
     return pw.Stack(
       children: [
-        // 📌 기존 계약 내용 (왼쪽 정렬)
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
+            // 타이틀 영역
             pw.Center(
               child: pw.Text(
                 title,
                 style: pw.TextStyle(
                   font: getFont(),
-                  fontSize: 24,
+                  fontSize: 28,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
             ),
-            pw.SizedBox(height: 15),
+            pw.SizedBox(height: 30),
 
-            // 근로자명 정보
-            pw.Text(
-              _getLocalizedText(en: 'Worker Name', vi: 'Tên người lao động', ko: '근로자명'),
-              style: pw.TextStyle(
-                font: getFont(),
-                fontSize: 16,
-                fontWeight: pw.FontWeight.bold,
+            // 근로자 정보 섹션
+            _buildSectionWithNumberedTitle(
+              getFont: getFont,
+              number: '1',
+              titleKo: '근로자 정보',
+              titleEn: 'Worker Name',
+              titleVi: 'Tên người lao động',
+              content: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    widget.contract['workerName'][widget.langCode == 'en' ? 'english' :
+                    widget.langCode == 'vi' ? 'vietnamese' : 'korean'],
+                    style: pw.TextStyle(
+                      font: getFont(),
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
-            pw.SizedBox(height: 8),
-            pw.Container(
-              padding: const pw.EdgeInsets.all(8),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(),
-              ),
-              child: pw.Text(
-                widget.contract['workerName'][widget.langCode == 'en' ? 'english' :
-                widget.langCode == 'vi' ? 'vietnamese' : 'korean'],
-                style: pw.TextStyle(font: getFont()),
-              ),
-            ),
-            pw.SizedBox(height: 15),
 
-            // 📌 모든 계약 내용 추가
-            if (widget.contract.containsKey('sections')) ...[
-              for (int i = 0; i < widget.contract['sections'].length; i++) ...[
-                pw.Text(
-                  _getLocalizedText(
-                      en: getSectionTitle(widget.contract['sections'][i]['title'], 'en'),
-                      vi: getSectionTitle(widget.contract['sections'][i]['title'], 'vi'),
-                      ko: widget.contract['sections'][i]['title']
-                  ),
-                  style: pw.TextStyle(
-                    font: getFont(),
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.SizedBox(height: 8),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(8),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(),
-                  ),
-                  child: pw.Text(
+            // 계약 섹션들
+            if (widget.contract.containsKey('sections'))
+              for (int i = 0; i < widget.contract['sections'].length; i++)
+                _buildSectionWithNumberedTitle(
+                  getFont: getFont,
+                  number: '${i + 2}',
+                  titleKo: widget.contract['sections'][i]['title'],
+                  titleEn: getSectionTitle(widget.contract['sections'][i]['title'], 'en'),
+                  titleVi: getSectionTitle(widget.contract['sections'][i]['title'], 'vi'),
+                  content: pw.Text(
                     widget.contract['sections'][i]['content'][widget.langCode == 'en' ? 'english' :
                     widget.langCode == 'vi' ? 'vietnamese' : 'korean'],
-                    style: pw.TextStyle(font: getFont()),
+                    style: pw.TextStyle(
+                      font: getFont(),
+                      fontSize: 14,
+                    ),
                   ),
                 ),
-                pw.SizedBox(height: 15),
-              ],
-            ],
           ],
         ),
 
-        // ✅ 오른쪽 아래에 서명 배치
+        // 서명 영역 - 페이지 오른쪽 하단에 고정
         if (widget.contract['signature'] != null)
           pw.Positioned(
-            bottom: 20, // 하단에서 20pt 위로
-            right: 20,  // 오른쪽에서 20pt 왼쪽으로
+            bottom: 20,
+            right: 20,
             child: pw.Container(
-              width: 200,  // 서명 크기
+              width: 200,
               height: 100,
               decoration: pw.BoxDecoration(
-                border: pw.Border.all(),  // 테두리 추가 (디버깅용)
+                border: pw.Border.all(color: PdfColors.grey300),
               ),
               child: pw.Image(
                 pw.MemoryImage(base64Decode(widget.contract['signature'])),
@@ -324,7 +328,50 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
           ),
       ],
     );
+  }
 
+// 섹션 타이틀 메서드 수정
+  pw.Widget _buildSectionWithNumberedTitle({
+    required pw.Font Function() getFont,
+    required String number,
+    required String titleKo,
+    required String titleEn,
+    required String titleVi,
+    required pw.Widget content,
+  }) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.SizedBox(height: 20),
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text(
+              '$number. ',
+              style: pw.TextStyle(
+                font: getFont(),
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.Text(
+              _getLocalizedText(en: titleEn, vi: titleVi, ko: titleKo),
+              style: pw.TextStyle(
+                font: getFont(),
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 10),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(20),
+          child: content,
+        ),
+      ],
+    );
   }
 
   String getSectionTitle(String koreanTitle, String langCode) {
