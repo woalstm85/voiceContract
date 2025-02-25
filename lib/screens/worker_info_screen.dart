@@ -155,7 +155,7 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
       _recordingStatus = RecordingStatus.processing;
     });
 
-    context.showWavePulseLoading(message: '음성 번역 중');
+    context.showWavePulseLoading(message: '음성번역중');
     try {
       final audio = await audioFile.readAsBytes();
 

@@ -86,7 +86,7 @@ class _WavePulseLoadingState extends State<WavePulseLoading> with SingleTickerPr
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.translate,
+                          Icons.g_translate,
                           color: Colors.blue,
                           size: 50,
                         ),
