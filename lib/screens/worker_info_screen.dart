@@ -6,11 +6,11 @@ import 'package:google_speech/google_speech.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
-import 'package:translator/translator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'speech_recognition_screen.dart';
 import '../../widgets/wave_pulse_loading.dart';
+import 'package:http/http.dart' as http;
 
 class WorkerInfoScreen extends StatefulWidget {
   const WorkerInfoScreen({Key? key}) : super(key: key);
@@ -59,7 +59,7 @@ enum RecordingStatus {
 }
 
 class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
-  final translator = GoogleTranslator();
+
   final TextEditingController _nameController = TextEditingController();
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 3,
@@ -85,6 +85,40 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
       }
     });
   }
+
+  Future<String> _translateText(String text, String targetLanguage) async {
+    try {
+      // API 키를 실제 키로 교체했는지 확인
+      final apiKey = "AIzaSyDNiiHzhqOX79XJjQ6gHyFd9dGIfyekJJw";
+
+      // URL에 API 키를 쿼리 파라미터로 추가
+      final uri = Uri.parse('https://translation.googleapis.com/language/translate/v2?key=$apiKey');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'q': text,
+          'source': 'ko',
+          'target': targetLanguage,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data['data']['translations'][0]['translatedText'];
+      } else {
+        print('번역 API 오류: ${response.statusCode} ${response.body}');
+        return '';
+      }
+    } catch (e) {
+      print('번역 오류: $e');
+      return '';
+    }
+  }
+
 
   Future<void> _initSpeechToText() async {
     final String jsonString = await rootBundle.loadString('assets/voice_service_account.json');
@@ -196,19 +230,16 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
         return;
       }
 
-      // 번역 수행
-      final translations = await Future.wait([
-        translator.translate(recognizedText, from: 'ko', to: 'en'),
-        translator.translate(recognizedText, from: 'ko', to: 'vi'),
-      ]);
+      final englishText = await _translateText(recognizedText, 'en');
+      final vietnameseText = await _translateText(recognizedText, 'vi');
 
       // SharedPreferences에 저장
       final prefs = await SharedPreferences.getInstance();
       final workerInfo = {
         'workerName': {
           'korean': recognizedText,
-          'english': translations[0].text,
-          'vietnamese': translations[1].text,
+          'english': englishText,
+          'vietnamese': vietnameseText,
         },
         'content': {
           'korean': "",

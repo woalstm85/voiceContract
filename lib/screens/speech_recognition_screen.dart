@@ -7,11 +7,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 import 'package:path/path.dart' as path;
-import 'package:just_audio/just_audio.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:translator/translator.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../../widgets/wave_pulse_loading.dart';
+import 'package:http/http.dart' as http;
 
 class ContractSection {
   final String id;
@@ -41,14 +41,13 @@ class SpeechRecognitionScreen extends StatefulWidget {
 }
 
 class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
-  final translator = GoogleTranslator();
+
   final FlutterTts flutterTts = FlutterTts();
   bool _isRecording = false;
   bool _isPlaying = false;
   String _workerName = '';
-  String _currentAudioPath = '';
   final _audioRecorder = AudioRecorder();
-  final _audioPlayer = AudioPlayer();
+  final AudioPlayer _audioPlayer = AudioPlayer();
   SpeechToText? _speechToText;
 
   // 현재 확장된 섹션
@@ -98,12 +97,37 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     }
   }
 
-  void _initAudioPlayer() {
-    _audioPlayer.playerStateStream.listen((state) {
-      setState(() {
-        _isPlaying = state.playing;
-      });
-    });
+  Future<String> _translateText(String text, String targetLanguage) async {
+    try {
+      // API 키를 실제 키로 교체했는지 확인
+      final apiKey = "AIzaSyDNiiHzhqOX79XJjQ6gHyFd9dGIfyekJJw";
+
+      // URL에 API 키를 쿼리 파라미터로 추가
+      final uri = Uri.parse('https://translation.googleapis.com/language/translate/v2?key=$apiKey');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'q': text,
+          'source': 'ko',
+          'target': targetLanguage,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data['data']['translations'][0]['translatedText'];
+      } else {
+        print('번역 API 오류: ${response.statusCode} ${response.body}');
+        return '';
+      }
+    } catch (e) {
+      print('번역 오류: $e');
+      return '';
+    }
   }
 
   Future<void> _initSpeechToText() async {
@@ -125,7 +149,6 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     try {
       if (await Permission.microphone.request().isGranted) {
         final audioPath = await _getAudioFilePath();
-        _currentAudioPath = audioPath;
 
         await _audioRecorder.start(
           const RecordConfig(
@@ -245,18 +268,15 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
         return;
       }
 
-      // 번역 수행
-      final translations = await Future.wait([
-        translator.translate(recognizedText, from: 'ko', to: 'en'),
-        translator.translate(recognizedText, from: 'ko', to: 'vi'),
-      ]);
+      final englishText = await _translateText(recognizedText, 'en');
+      final vietnameseText = await _translateText(recognizedText, 'vi');
 
       setState(() {
         final index = _sections.indexWhere((s) => s.id == _expandedSectionId);
         if (index != -1) {
           _sections[index].koreanText = recognizedText;
-          _sections[index].englishText = translations[0].text;
-          _sections[index].vietnameseText = translations[1].text;
+          _sections[index].englishText = englishText;
+          _sections[index].vietnameseText = vietnameseText;
           _sections[index].isCompleted = true;
         }
       });
@@ -275,18 +295,35 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     }
   }
 
-  // 녹음된 오디오 재생/중지 토글
+  void _initAudioPlayer() {
+    _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
+      setState(() {
+        _isPlaying = state == PlayerState.playing;
+      });
+    });
+
+    _audioPlayer.onPlayerComplete.listen((_) {
+      setState(() {
+        _isPlaying = false;
+      });
+    });
+  }
+
   Future<void> _togglePlayback() async {
     try {
+      final section = _sections.firstWhere((s) => s.id == _expandedSectionId);
+
       if (_isPlaying) {
-        await _audioPlayer.stop();
+        await _audioPlayer.pause();
       } else {
-        final section = _sections.firstWhere((s) => s.id == _expandedSectionId);
-        await _audioPlayer.setFilePath(section.audioFilePath);
-        await _audioPlayer.play();
+        await _audioPlayer.play(DeviceFileSource(section.audioFilePath));
       }
     } catch (e) {
+      print('재생 오류: $e');
       showCustomSnackBar(context, '재생오류: $e');
+      setState(() {
+        _isPlaying = false;
+      });
     }
   }
 
@@ -482,8 +519,8 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildLanguageSection('한국어', section.koreanText, 'ko'),
-          _buildLanguageSection('English', section.englishText, 'en'),
-          _buildLanguageSection('Tiếng Việt', section.vietnameseText, 'vi'),
+          _buildLanguageSection('영어 (English)', section.englishText, 'en'),
+          _buildLanguageSection('베트남어 (Tiếng Việt)', section.vietnameseText, 'vi'),
 
           // 녹음 및 재생 버튼
           Row(
@@ -514,7 +551,7 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
                     style: const TextStyle(color: Colors.white), // 텍스트 색상을 흰색으로 설정
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
+                    backgroundColor: _isPlaying ? Colors.red : Colors.indigo,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 10,

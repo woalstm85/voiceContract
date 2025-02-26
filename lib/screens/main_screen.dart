@@ -114,10 +114,17 @@ class MainScreen extends StatelessWidget {
             color: Colors.indigo[50],
             child: Column(
               children: [
-                Icon(Icons.info_outline, size: 20, color: Colors.indigo[300]),
+                Icon(Icons.lightbulb, size: 20, color: Colors.indigo[300]),
                 const SizedBox(height: 8),
                 Text(
-                  '음성으로 말하면 자동으로 번역됩니다',
+                  '2025 Voice Contract. All rights reserved.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.indigo[400],
+                  ),
+                ),
+                Text(
+                  'Made with by 에이아이에스(주)',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.indigo[400],

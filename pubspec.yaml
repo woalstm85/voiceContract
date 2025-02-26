@@ -32,18 +32,17 @@ dependencies:
     sdk: flutter
   google_speech: ^3.0.0
   record: ^5.0.1
-  just_audio: ^0.9.36
+  just_audio: ^0.9.46
+  audioplayers: ^5.2.1
   path_provider: ^2.0.0
   permission_handler: ^10.0.0
   signature: ^5.0.0
-  translator: ^1.0.3+1
   shared_preferences: ^2.0.8
   flutter_tts: ^3.8.5
   pdf: ^3.10.7
   open_file: ^3.3.2
   share_plus: ^7.2.1
-  googleapis: ^11.3.0
-  googleapis_auth: ^1.4.0
+  http: ^1.3.0
 
 dev_dependencies:
   flutter_test:
