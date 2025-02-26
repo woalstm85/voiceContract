@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 import 'dart:io';
+import 'dart:async';
 import 'package:path_provider/path_provider.dart';
 import 'package:google_speech/google_speech.dart';
 import 'package:record/record.dart';
@@ -71,6 +72,7 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
   final _audioRecorder = AudioRecorder();
   SpeechToText? _speechToText;
   RecordingStatus _recordingStatus = RecordingStatus.idle;
+  bool _stoppedDueToSilence = false;
 
   @override
   void initState() {
@@ -152,8 +154,11 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
         setState(() {
           _isRecording = true;
           _recordingStatus = RecordingStatus.listening;
-          _nameController.text = '듣고 있습니다...';
+          _nameController.text = '음성인식중...';
         });
+
+        // 무음 모니터링 시작
+        _monitorRecording();
       }
     } catch (e) {
       setState(() {
@@ -168,12 +173,72 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
       final path = await _audioRecorder.stop();
       setState(() => _isRecording = false);
 
+      if (_stoppedDueToSilence) {
+        // 무음으로 인한 중지인 경우
+        setState(() {
+          _recordingStatus = RecordingStatus.idle;
+          _nameController.text = ''; // 텍스트 필드 초기화
+        });
+
+        // 스낵바 표시
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('음성이 인식되지 않았습니다'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // 플래그 초기화
+        _stoppedDueToSilence = false;
+
+        return; // 더 이상 처리하지 않음
+      }
+
+      // 정상적인 녹음 중지인 경우
       if (path != null) {
         await _processAudio(File(path));
       }
     } catch (e) {
       setState(() => _nameController.text = '녹음 중지 오류: $e');
     }
+  }
+
+// 녹음 중 소리가 없으면 자동으로 멈추기
+  Future<void> _monitorRecording() async {
+    int silentCount = 0;
+
+    Timer.periodic(Duration(seconds: 1), (timer) async {
+      if (!_isRecording) {
+        timer.cancel();
+        return;
+      }
+
+      try {
+        Amplitude? amplitudeData = await _audioRecorder.getAmplitude();
+        double amplitude = amplitudeData?.current ?? 0.0;
+
+        print('현재 소리 크기: $amplitude');
+
+        if (amplitude < 3.0) { // 소리가 작으면 카운트 증가
+          silentCount++;
+          print('무음 감지: $silentCount초');
+
+          if (silentCount >= 3) { // 3초 동안 무음이 지속되면
+            print('3초 동안 소리가 작아서 자동 중지합니다.');
+            timer.cancel();
+
+            // 무음으로 인한 중지 플래그 설정
+            _stoppedDueToSilence = true;
+
+            await _stopRecording();
+          }
+        } else {
+          silentCount = 0; // 소리가 감지되면 카운터 초기화
+        }
+      } catch (e) {
+        print('볼륨 모니터링 오류: $e');
+      }
+    });
   }
 
   Future<String> _getAudioFilePath() async {
@@ -419,7 +484,7 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
                 ),
                 const SizedBox(width: 16),
                 FloatingActionButton(
-                  backgroundColor: Colors.teal,
+                  backgroundColor: _isRecording ? Colors.red : Colors.teal,
                   onPressed: _toggleListening,
                   child: Icon(_isRecording ? Icons.mic_off : Icons.mic, color: Colors.white),
                 ),
