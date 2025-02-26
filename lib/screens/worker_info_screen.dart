@@ -12,6 +12,7 @@ import 'dart:convert';
 import 'speech_recognition_screen.dart';
 import '../../widgets/wave_pulse_loading.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class WorkerInfoScreen extends StatefulWidget {
   const WorkerInfoScreen({Key? key}) : super(key: key);
@@ -90,10 +91,8 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
 
   Future<String> _translateText(String text, String targetLanguage) async {
     try {
-      // API 키를 실제 키로 교체했는지 확인
-      final apiKey = "AIzaSyDNiiHzhqOX79XJjQ6gHyFd9dGIfyekJJw";
+      final apiKey = dotenv.env['GOOGLE_API_KEY'] ?? '';
 
-      // URL에 API 키를 쿼리 파라미터로 추가
       final uri = Uri.parse('https://translation.googleapis.com/language/translate/v2?key=$apiKey');
 
       final response = await http.post(
