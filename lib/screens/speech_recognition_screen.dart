@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -56,6 +57,11 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
   // 섹션 목록
   late List<ContractSection> _sections;
 
+  // 스크롤 컨트롤러 추가
+  final ScrollController _scrollController = ScrollController();
+  // 앱바 색상 상태 변수
+  bool _isScrolled = false;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +70,20 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     _initAudioPlayer();
     _loadWorkerInfo();
     _initTts();
+    _scrollController.addListener(_scrollListener);
+  }
+
+  // 스크롤 위치에 따라 앱바 색상 변경
+  void _scrollListener() {
+    if (_scrollController.offset > 10 && !_isScrolled) {
+      setState(() {
+        _isScrolled = true;
+      });
+    } else if (_scrollController.offset <= 10 && _isScrolled) {
+      setState(() {
+        _isScrolled = false;
+      });
+    }
   }
 
   void _initSections() {
@@ -170,6 +190,7 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
             _sections[index].vietnameseText = '';
           }
         });
+        _monitorRecording();
       }
     } catch (e) {
       setState(() {
@@ -181,17 +202,78 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     }
   }
 
+// 클래스 변수로 추가
+  bool _stoppedDueToSilence = false;
+
+// 무음 감지 함수 수정
+  Future<void> _monitorRecording() async {
+    int silentCount = 0;
+
+    Timer.periodic(Duration(seconds: 1), (timer) async {
+      if (!_isRecording) {
+        timer.cancel();
+        return;
+      }
+
+      try {
+        Amplitude? amplitudeData = await _audioRecorder.getAmplitude();
+        double amplitude = amplitudeData?.current ?? 0.0;
+
+        if (amplitude < 3.0) {
+          silentCount++;
+
+          if (silentCount >= 3) {
+            print('3초 동안 소리가 작아서 자동 중지합니다.');
+            timer.cancel();
+
+            // 무음으로 인한 중지 플래그 설정
+            _stoppedDueToSilence = true;
+
+            await _stopRecording();
+          }
+        } else {
+          silentCount = 0;
+        }
+      } catch (e) {
+        print('볼륨 모니터링 오류: $e');
+      }
+    });
+  }
+
   // 녹음 중지 및 오디오 처리
   Future<void> _stopRecording() async {
     try {
       final path = await _audioRecorder.stop();
       setState(() => _isRecording = false);
 
+      if (_stoppedDueToSilence) {
+        // 무음으로 인한 중지인 경우
+        setState(() {
+          final index = _sections.indexWhere((s) => s.id == _expandedSectionId);
+          if (index != -1) {
+            // 초기 상태로 되돌림
+            _sections[index].koreanText = '';
+            _sections[index].englishText = '';
+            _sections[index].vietnameseText = '';
+          }
+        });
+
+        // 스낵바 표시
+        showCustomSnackBar(context, '음성이 인식되지 않았습니다', seconds: 2);
+
+        // 플래그 초기화
+        _stoppedDueToSilence = false;
+
+        return; // 더 이상 처리하지 않음
+      }
+
+      // 정상적인 녹음 중지인 경우 (사용자가 직접 중지하거나 음성이 있는 경우)
       if (path != null) {
         final index = _sections.indexWhere((s) => s.id == _expandedSectionId);
         if (index != -1) {
           setState(() {
             _sections[index].audioFilePath = path;
+            _sections[index].koreanText = '처리 중...';
           });
         }
         await _processAudio(File(path));
@@ -244,7 +326,7 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
         setState(() {
           final index = _sections.indexWhere((s) => s.id == _expandedSectionId);
           if (index != -1) {
-            showCustomSnackBar(context, '음성을 인식할 수 없습니다');
+            showCustomSnackBar(context, '음성을 인식할 수 없습니다', seconds: 2);
           }
         });
         context.hideWavePulseLoading();
@@ -261,7 +343,7 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
         setState(() {
           final index = _sections.indexWhere((s) => s.id == _expandedSectionId);
           if (index != -1) {
-            showCustomSnackBar(context, '음성을 인식할 수 없습니다');
+            showCustomSnackBar(context, '음성을 인식할 수 없습니다', seconds: 2);
           }
         });
         context.hideWavePulseLoading();
@@ -566,13 +648,13 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     );
   }
 
-  void showCustomSnackBar(BuildContext context, String message) {
+  void showCustomSnackBar(BuildContext context, String message, {int seconds = 1}) {
     ScaffoldMessenger.of(context).removeCurrentSnackBar(); // 기존 스낵바 제거
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        duration: const Duration(seconds: 1), // 1초 유지
+        duration: Duration(seconds: seconds), // 매개변수로 받은 초 사용
       ),
     );
   }
@@ -582,14 +664,21 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _isScrolled ? Colors.indigo : Colors.white,
         centerTitle: true,
-        title: const Text(
+        title: Text(
           '근로계약서 작성',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          style: TextStyle(
+              color: _isScrolled ? Colors.white : Colors.black,
+              fontWeight: FontWeight.w600
+          ),
         ),
+        elevation: _isScrolled ? 4.0 : 0.0, // 스크롤 시 그림자 효과 추가
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          icon: Icon(
+              Icons.arrow_back_ios,
+              color: _isScrolled ? Colors.white : Colors.black
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -597,6 +686,7 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
         children: [
           Expanded(
             child: ListView(
+              controller: _scrollController, // 스크롤 컨트롤러 연결
               padding: const EdgeInsets.all(16),
               children: [
                 // 완료 상태 표시
@@ -684,6 +774,8 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     _audioRecorder.dispose();
     _audioPlayer.dispose();
     flutterTts.stop();
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
     super.dispose();
   }
 }
