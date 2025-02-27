@@ -211,7 +211,7 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
 // 무음 감지 함수 수정
   Future<void> _monitorRecording() async {
     int silentCount = 0;
-    const double silenceThreshold = -15.0; // 데시벨 스케일에 맞는 임계값
+    const double silenceThreshold = -25.0; // 데시벨 스케일에 맞는 임계값
     const int maxSilenceBeforeSpeech = 3; // 말하기 전 최대 무음 시간
     const int maxSilenceAfterSpeech = 3; // 말한 후 무음 시간 (번역 전)
 

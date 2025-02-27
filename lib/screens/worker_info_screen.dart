@@ -226,7 +226,7 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
 
   Future<void> _monitorRecording() async {
     int silentCount = 0;
-    const double silenceThreshold = -15.0;
+    const double silenceThreshold = -25.0;
     const int maxSilenceBeforeSpeech = 3;
     const int maxSilenceAfterSpeech = 3;
 

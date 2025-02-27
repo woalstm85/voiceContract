@@ -43,6 +43,7 @@ app.*.map.json
 /android/app/release
 # Google API 자격 증명 파일
 **/assets/voice_service_account.json
+android/app/google-services.json
 
 # 환경 변수 파일 추가
 .env

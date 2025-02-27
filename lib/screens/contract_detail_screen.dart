@@ -242,8 +242,8 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
 
   pw.Widget _buildPdfContent({required pw.Font Function() getFont}) {
     String title = _getLocalizedText(
-        en: 'Labor Contract',
-        vi: 'Hợp đồng lao động',
+        en: 'Standard Labor Contract',
+        vi: 'Hợp đồng lao động chuẩn',
         ko: '근로계약서'
     );
 
@@ -269,9 +269,9 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
             _buildSectionWithNumberedTitle(
               getFont: getFont,
               number: '1',
-              titleKo: '근로자 정보',
-              titleEn: 'Worker Name',
-              titleVi: 'Tên người lao động',
+              titleKo: '근로자명',
+              titleEn: "Name of Employee",
+              titleVi: 'Họ và tên người lao động',
               content: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
@@ -376,13 +376,12 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
 
   String getSectionTitle(String koreanTitle, String langCode) {
     final Map<String, Map<String, String>> translations = {
-      '근로개시일': {'en': 'Start Date of Work', 'vi': 'Ngày bắt đầu làm việc'},
-      '근무장소': {'en': 'Workplace', 'vi': 'Nơi làm việc'},
-      '업무내용': {'en': 'Job Description', 'vi': 'Nội dung công việc'},
-      '근로시간': {'en': 'Working Hours', 'vi': 'Thời gian làm việc'},
-      '임금': {'en': 'Wages', 'vi': 'Tiền lương'},
-      '휴일': {'en': 'Holidays', 'vi': 'Ngày nghỉ'},
-
+      '근로개시일': { 'en': 'Employment Start Date', 'vi': 'Ngày bắt đầu làm việc' },
+      '근무장소': { 'en': 'Place of Employment', 'vi': 'Địa điểm làm việc' },
+      '업무내용': { 'en': 'Job Description', 'vi': 'Nội dung công việc' },
+      '근로시간': { 'en': 'Working Hours', 'vi': 'Thời gian làm việc' },
+      '임금': { 'en': 'Payment', 'vi': 'Tiền lương' },
+      '휴일': { 'en': 'Holidays', 'vi': 'Ngày nghỉ' }
     };
 
     if (translations.containsKey(koreanTitle) && translations[koreanTitle]!.containsKey(langCode)) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import './worker_info_screen.dart';
 import './language_selection_screen.dart';
+import './profile_screen.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({Key? key}) : super(key: key);
@@ -8,7 +9,52 @@ class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(  // 드로어 추가
+        child: ListView(
+          children: [
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.indigo,
+              ),
+              child: Text(
+                'Voice Contract',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.person),
+              title: Text('프로필'),
+              onTap: () {
+                // 프로필 화면으로 이동
+                Navigator.pop(context);  // 드로어 닫기
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileScreen(),
+                  ),
+                );
+              },
+            ),
+            // 다른 메뉴 항목들 추가 가능
+          ],
+        ),
+      ),
       appBar: AppBar(
+        leading: IconButton(  // leading 속성 추가
+          icon: Icon(Icons.settings, color: Colors.indigo),
+          onPressed: () {
+            // 프로필 화면으로 바로 이동
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ProfileScreen(),
+              ),
+            );
+          },
+        ),
         elevation: 0,
         centerTitle: true,
         title: const Text(
@@ -21,11 +67,10 @@ class MainScreen extends StatelessWidget {
         ),
         backgroundColor: Colors.white,
       ),
-
       body: Column(
         children: [
 
-// 상단 배너/설명 영역
+          // 상단 배너/설명 영역
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
