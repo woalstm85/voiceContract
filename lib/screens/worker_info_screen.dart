@@ -74,6 +74,9 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
   SpeechToText? _speechToText;
   RecordingStatus _recordingStatus = RecordingStatus.idle;
   bool _stoppedDueToSilence = false;
+  bool _hasSpeechStarted = false;
+  int _totalSilenceAfterSpeech = 0;
+  Timer? _silenceTimer;
 
   @override
   void initState() {
@@ -135,6 +138,7 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
     }
   }
 
+// 녹음 시작 시 상태 초기화 (기존 _startRecording 함수에 추가)
   Future<void> _startRecording() async {
     try {
       if (await Permission.microphone.request().isGranted) {
@@ -154,6 +158,8 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
           _isRecording = true;
           _recordingStatus = RecordingStatus.listening;
           _nameController.text = '음성인식중...';
+          _hasSpeechStarted = false; // 상태 초기화
+          _totalSilenceAfterSpeech = 0; // 상태 초기화
         });
 
         // 무음 모니터링 시작
@@ -169,17 +175,24 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
 
   Future<void> _stopRecording() async {
     try {
-      final path = await _audioRecorder.stop();
+      // 녹음 상태 업데이트 (stop() 전에 설정)
       setState(() => _isRecording = false);
 
+      final path = await _audioRecorder.stop();
+
+      if (path == null) {
+        print("오류: 녹음 파일이 생성되지 않음");
+        return;
+      }
+
       if (_stoppedDueToSilence) {
-        // 무음으로 인한 중지인 경우
+        // 무음 감지로 인해 녹음 중지된 경우
         setState(() {
           _recordingStatus = RecordingStatus.idle;
           _nameController.text = ''; // 텍스트 필드 초기화
         });
 
-        // 스낵바 표시
+        // 사용자에게 안내
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('음성이 인식되지 않았습니다'),
@@ -189,24 +202,36 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
 
         // 플래그 초기화
         _stoppedDueToSilence = false;
-
-        return; // 더 이상 처리하지 않음
+        return; // 이후 처리 중단
       }
 
-      // 정상적인 녹음 중지인 경우
-      if (path != null) {
-        await _processAudio(File(path));
-      }
+      // 정상적인 녹음 중지인 경우 파일 처리
+      await _processAudio(File(path));
     } catch (e) {
-      setState(() => _nameController.text = '녹음 중지 오류: $e');
+      print("녹음 중지 오류: $e");
+
+      setState(() {
+        _isRecording = false; // 오류 발생 시에도 녹음 상태 false로
+        _nameController.text = '녹음 중지 오류 발생';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('녹음 중 오류가 발생했습니다: $e'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
-// 녹음 중 소리가 없으면 자동으로 멈추기
   Future<void> _monitorRecording() async {
     int silentCount = 0;
+    const double silenceThreshold = -15.0;
+    const int maxSilenceBeforeSpeech = 3;
+    const int maxSilenceAfterSpeech = 3;
 
-    Timer.periodic(Duration(seconds: 1), (timer) async {
+    _silenceTimer?.cancel(); // 기존 타이머가 있다면 취소
+    _silenceTimer = Timer.periodic(Duration(milliseconds: 500), (timer) async {
       if (!_isRecording) {
         timer.cancel();
         return;
@@ -218,21 +243,36 @@ class _WorkerInfoScreenState extends State<WorkerInfoScreen> {
 
         print('현재 소리 크기: $amplitude');
 
-        if (amplitude < 3.0) { // 소리가 작으면 카운트 증가
-          silentCount++;
-          print('무음 감지: $silentCount초');
-
-          if (silentCount >= 3) { // 3초 동안 무음이 지속되면
-            print('3초 동안 소리가 작아서 자동 중지합니다.');
-            timer.cancel();
-
-            // 무음으로 인한 중지 플래그 설정
-            _stoppedDueToSilence = true;
-
-            await _stopRecording();
+        if (amplitude > silenceThreshold) {
+          silentCount = 0; // 무음 카운터 초기화
+          if (!_hasSpeechStarted) {
+            setState(() {
+              _hasSpeechStarted = true;
+            });
+            print('말하기 시작 감지');
           }
         } else {
-          silentCount = 0; // 소리가 감지되면 카운터 초기화
+          silentCount++;
+          print('무음 감지: ${silentCount * 0.5}초');
+
+          if (_hasSpeechStarted) {
+            _totalSilenceAfterSpeech = silentCount;
+            if (_totalSilenceAfterSpeech >= maxSilenceAfterSpeech * 2) {
+              print('말한 후 ${maxSilenceAfterSpeech}초 무음 감지. 음성 처리를 시작합니다.');
+              timer.cancel();
+              _silenceTimer = null; // 타이머 해제
+              _stoppedDueToSilence = false;
+              await _stopRecording();
+            }
+          } else {
+            if (silentCount >= maxSilenceBeforeSpeech * 2) {
+              print('${maxSilenceBeforeSpeech}초 동안 소리가 감지되지 않아 자동 중지합니다.');
+              timer.cancel();
+              _silenceTimer = null;
+              _stoppedDueToSilence = true;
+              await _stopRecording();
+            }
+          }
         }
       } catch (e) {
         print('볼륨 모니터링 오류: $e');

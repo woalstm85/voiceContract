@@ -7,7 +7,7 @@ class WavePulseLoading extends StatefulWidget {
   const WavePulseLoading({
     Key? key,
     this.message = '음성 번역 중',
-    this.baseColor = Colors.blue,
+    this.baseColor = const Color(0xFF2196F3), // 더 강한 파란색 사용
   }) : super(key: key);
 
   @override
@@ -36,12 +36,14 @@ class _WavePulseLoadingState extends State<WavePulseLoading> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final Color waveColor = widget.baseColor ?? Colors.blue;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 흐릿한 배경 (약간의 흰색 톤)
+        // 어두운 배경으로 변경하여 파동 효과가 더 잘 보이게 함
         Container(
-          color: Colors.grey.withOpacity(0.5),
+          color: Colors.black.withOpacity(0.3),
         ),
 
         // 파동 효과 및 중앙 컨텐츠
@@ -52,52 +54,70 @@ class _WavePulseLoadingState extends State<WavePulseLoading> with SingleTickerPr
               return Stack(
                 alignment: Alignment.center,
                 children: [
-                  // 첫 번째 파동 (파란색 계열)
+                  // 세 번째 파동 (더 큰 파동 추가)
+                  Container(
+                    width: 250 * _animation.value,
+                    height: 250 * _animation.value,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: waveColor.withOpacity(
+                          (1.0 - _animation.value).clamp(0.0, 1.0) * 0.3
+                      ),
+                    ),
+                  ),
+
+                  // 두 번째 파동 (더 선명하게 만듦)
                   Container(
                     width: 200 * _animation.value,
                     height: 200 * _animation.value,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.blue.withOpacity(
-                          (1.0 - _animation.value).clamp(0.0, 1.0) * 0.2
+                      color: waveColor.withOpacity(
+                          (1.0 - _animation.value).clamp(0.0, 1.0) * 0.5
                       ),
                     ),
                   ),
-                  // 두 번째 파동 (파란색 계열)
+
+                  // 첫 번째 파동 (더 선명하게 만듦)
                   Container(
                     width: 150 * _animation.value,
                     height: 150 * _animation.value,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.blue.withOpacity(
-                          (1.0 - _animation.value).clamp(0.0, 1.0) * 0.4
+                      color: waveColor.withOpacity(
+                          (1.0 - _animation.value).clamp(0.0, 1.0) * 0.7
                       ),
                     ),
                   ),
 
-                  // 중앙 내용 배경 추가 (약간 흰색 배경)
+                  // 중앙 내용 배경 (더 불투명하게 만듦)
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.5),
+                      color: Colors.white.withOpacity(0.85),
+                      // 테두리 추가하여 더 잘 보이게 함
+                      border: Border.all(
+                        color: waveColor.withOpacity(0.8),
+                        width: 2.0,
+                      ),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.g_translate,
-                          color: Colors.blue,
-                          size: 50,
+                          color: waveColor,
+                          size: 40,
                         ),
                         const SizedBox(height: 16),
                         Text(
                           widget.message!,
-                          textAlign: TextAlign.center, // 텍스트 중앙 정렬
-
+                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.blue[800],
-                            fontSize: 14,
+                            color: waveColor.withBlue(waveColor.blue - 40),
+                            fontWeight: FontWeight.bold, // 텍스트 굵게 표시
+                            fontSize: 12,
                             decoration: TextDecoration.none,
                           ),
                         ),

@@ -62,6 +62,10 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
   final ScrollController _scrollController = ScrollController();
   // 앱바 색상 상태 변수
   bool _isScrolled = false;
+  bool _stoppedDueToSilence = false;
+  bool _hasSpeechStarted = false;
+  int _totalSilenceAfterSpeech = 0;
+  Timer? _silenceTimer;
 
   @override
   void initState() {
@@ -72,6 +76,8 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     _loadWorkerInfo();
     _initTts();
     _scrollController.addListener(_scrollListener);
+    _hasSpeechStarted = false;
+    _totalSilenceAfterSpeech = 0;
   }
 
   // 스크롤 위치에 따라 앱바 색상 변경
@@ -202,14 +208,15 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     }
   }
 
-// 클래스 변수로 추가
-  bool _stoppedDueToSilence = false;
-
 // 무음 감지 함수 수정
   Future<void> _monitorRecording() async {
     int silentCount = 0;
+    const double silenceThreshold = -15.0; // 데시벨 스케일에 맞는 임계값
+    const int maxSilenceBeforeSpeech = 3; // 말하기 전 최대 무음 시간
+    const int maxSilenceAfterSpeech = 3; // 말한 후 무음 시간 (번역 전)
 
-    Timer.periodic(Duration(seconds: 1), (timer) async {
+    _silenceTimer?.cancel(); // 기존 타이머가 있다면 취소
+    _silenceTimer = Timer.periodic(Duration(milliseconds: 500), (timer) async {
       if (!_isRecording) {
         timer.cancel();
         return;
@@ -219,20 +226,47 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
         Amplitude? amplitudeData = await _audioRecorder.getAmplitude();
         double amplitude = amplitudeData?.current ?? 0.0;
 
-        if (amplitude < 3.0) {
-          silentCount++;
+        print('현재 소리 크기: $amplitude');
 
-          if (silentCount >= 3) {
-            print('3초 동안 소리가 작아서 자동 중지합니다.');
-            timer.cancel();
+        if (amplitude > silenceThreshold) {
+          // 소리가 감지됨
+          silentCount = 0; // 무음 카운터 초기화
 
-            // 무음으로 인한 중지 플래그 설정
-            _stoppedDueToSilence = true;
-
-            await _stopRecording();
+          if (!_hasSpeechStarted) {
+            // 처음으로 말하기 시작함
+            setState(() {
+              _hasSpeechStarted = true;
+            });
+            print('말하기 시작 감지');
           }
         } else {
-          silentCount = 0;
+          // 무음 감지
+          silentCount++;
+          print('무음 감지: ${silentCount * 0.5}초');
+
+          if (_hasSpeechStarted) {
+            // 이미 말하기가 시작된 상태에서의 무음
+            _totalSilenceAfterSpeech = silentCount;
+
+            // 말한 후 일정 시간(maxSilenceAfterSpeech) 이상 무음이면 녹음 중지 후 처리
+            if (_totalSilenceAfterSpeech >= maxSilenceAfterSpeech * 2) { // *2는 0.5초 간격이므로
+              print('말한 후 ${maxSilenceAfterSpeech}초 무음 감지. 음성 처리를 시작합니다.');
+              timer.cancel();
+              _silenceTimer = null; // 타이머 해제
+              _stoppedDueToSilence = false; // 정상적인 종료로 처리
+              await _stopRecording();
+            }
+          } else {
+            // 아직 말하기가 시작되지 않은 상태에서의 무음
+            // 처음부터 일정 시간(maxSilenceBeforeSpeech) 이상 무음이면 녹음 중지
+            if (silentCount >= maxSilenceBeforeSpeech * 2) { // *2는 0.5초 간격이므로
+              print('${maxSilenceBeforeSpeech}초 동안 소리가 감지되지 않아 자동 중지합니다.');
+              timer.cancel();
+              _silenceTimer = null; // 타이머 해제
+              _stoppedDueToSilence = true; // 무음으로 인한 중지
+              await _stopRecording();
+            }
+          }
         }
       } catch (e) {
         print('볼륨 모니터링 오류: $e');
@@ -240,11 +274,18 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     });
   }
 
-  // 녹음 중지 및 오디오 처리
+// 녹음 중지 및 오디오 처리
   Future<void> _stopRecording() async {
     try {
-      final path = await _audioRecorder.stop();
+      // 먼저 녹음 상태 업데이트 (stop() 전에 설정)
       setState(() => _isRecording = false);
+
+      final path = await _audioRecorder.stop();
+
+      if (path == null) {
+        print("오류: 녹음 파일이 생성되지 않음");
+        return;
+      }
 
       if (_stoppedDueToSilence) {
         // 무음으로 인한 중지인 경우
@@ -268,23 +309,22 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
       }
 
       // 정상적인 녹음 중지인 경우 (사용자가 직접 중지하거나 음성이 있는 경우)
-      if (path != null) {
-        final index = _sections.indexWhere((s) => s.id == _expandedSectionId);
-        if (index != -1) {
-          setState(() {
-            _sections[index].audioFilePath = path;
-            _sections[index].koreanText = '처리 중...';
-          });
-        }
-        await _processAudio(File(path));
+      final index = _sections.indexWhere((s) => s.id == _expandedSectionId);
+      if (index != -1) {
+        setState(() {
+          _sections[index].audioFilePath = path;
+          _sections[index].koreanText = '처리 중...';
+        });
       }
+      await _processAudio(File(path));
     } catch (e) {
+      print("녹음 중지 오류: $e");
+
       setState(() {
-        final index = _sections.indexWhere((s) => s.id == _expandedSectionId);
-        if (index != -1) {
-          showCustomSnackBar(context, '녹음 중지 오류: $e');
-        }
+        _isRecording = false; // 오류 발생 시에도 녹음 상태 false로
       });
+
+      showCustomSnackBar(context, '녹음 중지 오류: $e');
     }
   }
 
@@ -776,6 +816,7 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
     flutterTts.stop();
     _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
+    _silenceTimer?.cancel();
     super.dispose();
   }
 }
