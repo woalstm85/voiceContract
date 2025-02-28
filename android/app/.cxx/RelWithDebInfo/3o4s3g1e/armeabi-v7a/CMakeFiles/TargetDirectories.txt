@@ -1,0 +1,2 @@
+C:/Users/zzams/StudioProjects/contact/android/app/.cxx/RelWithDebInfo/3o4s3g1e/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/zzams/StudioProjects/contact/android/app/.cxx/RelWithDebInfo/3o4s3g1e/armeabi-v7a/CMakeFiles/rebuild_cache.dir

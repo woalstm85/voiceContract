@@ -23,8 +23,12 @@ class ContractDetailScreen extends StatefulWidget {
   State<ContractDetailScreen> createState() => _ContractDetailScreenState();
 }
 
-class _ContractDetailScreenState extends State<ContractDetailScreen> {
+class _ContractDetailScreenState extends State<ContractDetailScreen> with SingleTickerProviderStateMixin {
   final FlutterTts flutterTts = FlutterTts();
+  final ScrollController _scrollController = ScrollController();
+  late TabController _languageTabController;
+  String _currentLangCode = '';
+  bool _showComparisonView = false;
 
   String _formatDate(String dateString) {
     final date = DateTime.parse(dateString);
@@ -34,31 +38,133 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _currentLangCode = widget.langCode;
     _initTts();
+    _initLanguageTabs();
   }
 
+  void _initLanguageTabs() {
+    _languageTabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: _currentLangCode == 'ko' ? 0 : _currentLangCode == 'en' ? 1 : 2,
+    );
+
+    _languageTabController.addListener(() {
+      if (_languageTabController.indexIsChanging) {
+        setState(() {
+          switch (_languageTabController.index) {
+            case 0:
+              _currentLangCode = 'ko';
+              break;
+            case 1:
+              _currentLangCode = 'en';
+              break;
+            case 2:
+              _currentLangCode = 'vi';
+              break;
+          }
+        });
+        _initTts();
+      }
+    });
+  }
+
+  // 스크롤 진행 상태 업데이트 메소드 제거됨
+
   Future<void> _initTts() async {
-    await flutterTts.setLanguage(widget.langCode == 'vi' ? 'vi-VN' :
-    widget.langCode == 'en' ? 'en-US' : 'ko-KR');
+    await flutterTts.setLanguage(_currentLangCode == 'vi' ? 'vi-VN' :
+    _currentLangCode == 'en' ? 'en-US' : 'ko-KR');
   }
 
   Future<void> _speak(String text) async {
     await flutterTts.speak(text);
   }
 
-  Widget _buildInfoSection(String title, String content, bool showSpeakButton) {
+  // 언어 이름 가져오기
+  String _getLanguageName(String code) {
+    switch (code) {
+      case 'ko':
+        return '한국어';
+      case 'en':
+        return '영어';
+      case 'vi':
+        return '베트남어';
+      default:
+        return '한국어';
+    }
+  }
+
+  // 언어 색상 가져오기
+  Color _getLanguageColor(String code) {
+    switch (code) {
+      case 'ko':
+        return Colors.indigo;
+      case 'en':
+        return Colors.teal;
+      case 'vi':
+        return Colors.deepPurple;
+      default:
+        return Colors.indigo;
+    }
+  }
+
+  // 비교 보기 토글
+  void _toggleComparisonView() {
+    setState(() {
+      _showComparisonView = !_showComparisonView;
+    });
+  }
+
+// 버튼형 탭 (TabBar 대신 버튼으로 교체)
+  Widget _buildLanguageTabButton(int index, String label) {
+    bool isSelected = _languageTabController.index == index;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _languageTabController.animateTo(index);
+          });
+        },
+        child: Container(
+          height: 44,
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? _getLanguageColor(_currentLangCode) : Colors.white,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+// 2. _buildInfoSection 메서드 수정 (화면에는 한국어로 표시, 읽기만 번역)
+  Widget _buildInfoSection(String title, String content, bool showSpeakButton, {String? originalContent}) {
+    // 읽기용 번역된 타이틀
+    final String titleForReading = _getTitleForReading(title);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.indigo.withOpacity(0.5),
+          color: _getLanguageColor(_currentLangCode).withOpacity(0.5),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigo.withOpacity(0.1),
+            color: _getLanguageColor(_currentLangCode).withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 3),
@@ -75,51 +181,158 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    title,
+                    title, // 항상 한국어 타이틀 표시
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.indigo,
+                      color: _getLanguageColor(_currentLangCode),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.volume_up_rounded, color: Colors.indigo[300]),
-                  onPressed: () => _speak(title),
+                  icon: Icon(Icons.volume_up_rounded, color: _getLanguageColor(_currentLangCode).withOpacity(0.7)),
+                  onPressed: () => _speak(titleForReading), // 번역된 제목으로 읽기
                   tooltip: "제목 읽기",
                   iconSize: 24,
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    content,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black87,
-                    ),
-                  ),
+            // 비교 보기가 활성화된 경우 원본(한국어) 내용 먼저 표시
+            if (_showComparisonView && _currentLangCode != 'ko' && originalContent != null) ...[
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.indigo.withOpacity(0.2)),
                 ),
-                if (showSpeakButton)
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.indigo[50],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            '원본',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: IconButton(
-                      icon: Icon(Icons.volume_up_rounded, color: Colors.indigo[400]),
-                      onPressed: () => _speak(content),
-                      tooltip: "내용 읽기",
-                      iconSize: 20,
-                      padding: const EdgeInsets.all(8),
-                      constraints: const BoxConstraints(),
+                    const SizedBox(height: 8),
+                    Text(
+                      originalContent,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _getLanguageColor(_currentLangCode).withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _getLanguageColor(_currentLangCode).withOpacity(0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getLanguageColor(_currentLangCode),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '번역본',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            content,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        if (showSpeakButton)
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _getLanguageColor(_currentLangCode).withOpacity(0.1),
+                            ),
+                            child: IconButton(
+                              icon: Icon(Icons.volume_up_rounded, color: _getLanguageColor(_currentLangCode)),
+                              onPressed: () => _speak(content),
+                              tooltip: "내용 읽기",
+                              iconSize: 20,
+                              padding: const EdgeInsets.all(8),
+                              constraints: const BoxConstraints(),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              // 일반 보기 모드
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      content,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
-              ],
-            ),
+                  if (showSpeakButton)
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _getLanguageColor(_currentLangCode).withOpacity(0.1),
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.volume_up_rounded, color: _getLanguageColor(_currentLangCode)),
+                        onPressed: () => _speak(content),
+                        tooltip: "내용 읽기",
+                        iconSize: 20,
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -128,11 +341,15 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final contractDate = widget.contract.containsKey('date')
+        ? _formatDate(widget.contract['date'])
+        : '날짜 정보 없음';
+
     return Scaffold(
       backgroundColor: Colors.indigo[50],
       appBar: AppBar(
         centerTitle: true,
-        backgroundColor: Colors.indigo,
+        backgroundColor: _getLanguageColor(_currentLangCode),
         title: const Text(
           '근로계약서 작성내용',
           style: TextStyle(
@@ -154,33 +371,109 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 근로자명 정보 표시
-            _buildInfoSection(
-                '1. 근로자명',
-                widget.contract['workerName'][
-                widget.langCode == 'en' ? 'english' :
-                widget.langCode == 'vi' ? 'vietnamese' : 'korean'
-                ],
-                widget.langCode != 'ko'
-            ),
+      body: Column(
+        children: [
+          // 앱바 하단에 언어 선택과 진행 상태 표시 (고정)
+          Container(
+            color: _getLanguageColor(_currentLangCode),
+            child: Column(
+              children: [
+                // 언어 선택 탭 (개선된 UI, 밑줄 제거)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Row(
+                    children: [
+                      _buildLanguageTabButton(0, '한국어'),
+                      const SizedBox(width: 4),
+                      _buildLanguageTabButton(1, '영어'),
+                      const SizedBox(width: 4),
+                      _buildLanguageTabButton(2, '베트남어'),
+                    ],
+                  ),
+                ),
 
-            // 모든 섹션 정보 동적으로 표시
-            for (int i = 0; i < widget.contract['sections'].length; i++)
-              _buildInfoSection(
-                  '${i + 2}. ${widget.contract['sections'][i]['title']}',
-                  widget.contract['sections'][i]['content'][
-                  widget.langCode == 'en' ? 'english' :
-                  widget.langCode == 'vi' ? 'vietnamese' : 'korean'
-                  ],
-                  widget.langCode != 'ko'
+                // 비교 보기 버튼과 날짜 정보
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (_currentLangCode != 'ko')
+                        OutlinedButton.icon(
+                          onPressed: _toggleComparisonView,
+                          icon: Icon(
+                            _showComparisonView ? Icons.compare_arrows : Icons.compare,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          label: Text(
+                            _showComparisonView ? '일반 보기' : '비교 보기',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.white),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          ),
+                        )
+                      else
+                        const SizedBox(), // 한국어일 때는 비교 버튼 없음
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today, color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            contractDate,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 계약서 내용 (Expanded로 남은 공간 차지)
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 근로자명 정보 표시
+                  _buildInfoSection(
+                    '1. 근로자명',
+                    widget.contract['workerName'][
+                    _currentLangCode == 'en' ? 'english' :
+                    _currentLangCode == 'vi' ? 'vietnamese' : 'korean'
+                    ],
+                    _currentLangCode != 'ko',
+                    originalContent: _currentLangCode != 'ko' ? widget.contract['workerName']['korean'] : null,
+                  ),
+
+                  // 모든 섹션 정보 동적으로 표시
+                  for (int i = 0; i < widget.contract['sections'].length; i++)
+                    _buildInfoSection(
+                      '${i + 2}. ${widget.contract['sections'][i]['title']}',
+                      widget.contract['sections'][i]['content'][
+                      _currentLangCode == 'en' ? 'english' :
+                      _currentLangCode == 'vi' ? 'vietnamese' : 'korean'
+                      ],
+                      _currentLangCode != 'ko',
+                      originalContent: _currentLangCode != 'ko' ? widget.contract['sections'][i]['content']['korean'] : null,
+                    ),
+                ],
               ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -188,7 +481,7 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.indigo,
+              backgroundColor: _getLanguageColor(_currentLangCode),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -201,6 +494,31 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
                 color: Colors.white,
                 fontSize: 16,
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 개선된 언어 탭 위젯
+  Widget _buildLanguageTab(int index, String label) {
+    bool isSelected = _languageTabController.index == index;
+
+    return Expanded(
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(3), // 각 탭 사이의 간격
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? _getLanguageColor(_currentLangCode) : Colors.white,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 14,
             ),
           ),
         ),
@@ -223,7 +541,7 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
-          return _buildPdfContent(getFont: () => widget.langCode == 'ko' ? koreanTtf : regularTtf);
+          return _buildPdfContent(getFont: () => _currentLangCode == 'ko' ? koreanTtf : regularTtf);
         },
       ),
     );
@@ -276,8 +594,8 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    widget.contract['workerName'][widget.langCode == 'en' ? 'english' :
-                    widget.langCode == 'vi' ? 'vietnamese' : 'korean'],
+                    widget.contract['workerName'][_currentLangCode == 'en' ? 'english' :
+                    _currentLangCode == 'vi' ? 'vietnamese' : 'korean'],
                     style: pw.TextStyle(
                       font: getFont(),
                       fontSize: 14,
@@ -298,8 +616,8 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
                   titleEn: getSectionTitle(widget.contract['sections'][i]['title'], 'en'),
                   titleVi: getSectionTitle(widget.contract['sections'][i]['title'], 'vi'),
                   content: pw.Text(
-                    widget.contract['sections'][i]['content'][widget.langCode == 'en' ? 'english' :
-                    widget.langCode == 'vi' ? 'vietnamese' : 'korean'],
+                    widget.contract['sections'][i]['content'][_currentLangCode == 'en' ? 'english' :
+                    _currentLangCode == 'vi' ? 'vietnamese' : 'korean'],
                     style: pw.TextStyle(
                       font: getFont(),
                       fontSize: 14,
@@ -374,6 +692,36 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
     );
   }
 
+  String _getTitleForReading(String koreanTitle) {
+    // 숫자와 제목 분리 (예: "1. 근로자명" -> 숫자="1", 제목="근로자명")
+    final parts = koreanTitle.split('. ');
+    if (parts.length != 2) return koreanTitle;
+
+    final number = parts[0];
+    final title = parts[1];
+
+    // 제목 번역 맵
+    final Map<String, Map<String, String>> translations = {
+      '근로자명': {'en': 'Name of Employee', 'vi': 'Họ và tên người lao động'},
+      '근로개시일': {'en': 'Employment Start Date', 'vi': 'Ngày bắt đầu làm việc'},
+      '근무장소': {'en': 'Place of Employment', 'vi': 'Địa điểm làm việc'},
+      '업무내용': {'en': 'Job Description', 'vi': 'Nội dung công việc'},
+      '근로시간': {'en': 'Working Hours', 'vi': 'Thời gian làm việc'},
+      '임금': {'en': 'Payment', 'vi': 'Tiền lương'},
+      '휴일': {'en': 'Holidays', 'vi': 'Ngày nghỉ'}
+    };
+
+    // 현재 언어에 맞는 번역된 제목 가져오기 (영어나 베트남어일 경우만)
+    if (_currentLangCode != 'ko' && translations.containsKey(title)) {
+      final translatedTitle = translations[title]?[_currentLangCode];
+      if (translatedTitle != null) {
+        return '$number. $translatedTitle';
+      }
+    }
+
+    return koreanTitle; // 한국어일 경우 그대로 반환
+  }
+
   String getSectionTitle(String koreanTitle, String langCode) {
     final Map<String, Map<String, String>> translations = {
       '근로개시일': { 'en': 'Employment Start Date', 'vi': 'Ngày bắt đầu làm việc' },
@@ -392,8 +740,8 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
   }
 
   String _getLocalizedText({required String en, required String vi, required String ko}) {
-    return widget.langCode == 'en' ? en :
-    widget.langCode == 'vi' ? vi : ko;
+    return _currentLangCode == 'en' ? en :
+    _currentLangCode == 'vi' ? vi : ko;
   }
   Future<void> _savePDFForAndroid(pw.Document pdf, String koreanName) async {
     final downloadDir = Directory('/storage/emulated/0/Download');
@@ -490,6 +838,8 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
   @override
   void dispose() {
     flutterTts.stop();
+    _scrollController.dispose();
+    _languageTabController.dispose();
     super.dispose();
   }
 }

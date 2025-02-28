@@ -9,48 +9,29 @@ class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(  // 드로어 추가
-        child: ListView(
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.indigo,
-              ),
-              child: Text(
-                'Voice Contract',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.person),
-              title: Text('프로필'),
-              onTap: () {
-                // 프로필 화면으로 이동
-                Navigator.pop(context);  // 드로어 닫기
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProfileScreen(),
-                  ),
-                );
-              },
-            ),
-            // 다른 메뉴 항목들 추가 가능
-          ],
-        ),
-      ),
       appBar: AppBar(
-        leading: IconButton(  // leading 속성 추가
+        leading: IconButton(
           icon: Icon(Icons.settings, color: Colors.indigo),
           onPressed: () {
-            // 프로필 화면으로 바로 이동
+            // 프로필 화면으로 왼쪽에서 오른쪽으로 슬라이드 애니메이션과 함께 이동
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const ProfileScreen(),
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => const ProfileScreen(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(-1.0, 0.0); // 왼쪽에서 시작 (-1.0, 0.0)
+                  const end = Offset.zero;        // 중앙으로 이동 (0.0, 0.0)
+                  const curve = Curves.easeInOut;
+
+                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  var offsetAnimation = animation.drive(tween);
+
+                  return SlideTransition(
+                    position: offsetAnimation,
+                    child: child,
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 200),
               ),
             );
           },
@@ -69,13 +50,11 @@ class MainScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-
           // 상단 배너/설명 영역
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.indigo, // 배경색을 인디고로 변경
-
+              color: Colors.indigo,
             ),
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: Column(
@@ -84,14 +63,14 @@ class MainScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 Row(
                   children: [
-                    Icon(Icons.description, color: Colors.white, size: 24), // 아이콘 색상을 흰색으로 변경
+                    Icon(Icons.description, color: Colors.white, size: 24),
                     const SizedBox(width: 12),
                     const Text(
                       '근로계약서 간편 작성',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white, // 텍스트 색상을 흰색으로 변경
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -101,7 +80,7 @@ class MainScreen extends StatelessWidget {
                   '음성 인식 기술을 통해 한국어로 말하면 영어와 베트남어로 자동 번역되는 편리한 근로계약서 작성 서비스입니다.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.9), // 설명 텍스트도 흰색으로 변경 (약간 투명도 추가)
+                    color: Colors.white.withOpacity(0.9),
                     height: 1.5,
                   ),
                 ),
@@ -123,10 +102,28 @@ class MainScreen extends StatelessWidget {
                     icon: Icons.edit_document,
                     color: Colors.indigo,
                     onPressed: () {
+                      // 슬라이드 애니메이션과 함께 근로계약서 작성 화면으로 이동
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const WorkerInfoScreen(),
+                        PageRouteBuilder(
+                          pageBuilder: (context, animation, secondaryAnimation) => const WorkerInfoScreen(),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(0.0, 1.0);
+                            const end = Offset.zero;
+                            const curve = Curves.easeInOutCubic;
+
+                            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                            var offsetAnimation = animation.drive(tween);
+
+                            return SlideTransition(
+                              position: offsetAnimation,
+                              child: FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              ),
+                            );
+                          },
+                          transitionDuration: const Duration(milliseconds: 200),
                         ),
                       );
                     },
@@ -139,10 +136,25 @@ class MainScreen extends StatelessWidget {
                     icon: Icons.history,
                     color: Colors.teal,
                     onPressed: () {
+                      // 슬라이드 업 애니메이션과 함께 언어 선택 화면으로 이동
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const LanguageSelectionScreen(isViewMode: true),
+                        PageRouteBuilder(
+                          pageBuilder: (context, animation, secondaryAnimation) => const LanguageSelectionScreen(isViewMode: true),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(0.0, 1.0);
+                            const end = Offset.zero;
+                            const curve = Curves.easeInOutCubic;
+
+                            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                            var offsetAnimation = animation.drive(tween);
+
+                            return SlideTransition(
+                              position: offsetAnimation,
+                              child: child,
+                            );
+                          },
+                          transitionDuration: const Duration(milliseconds: 200),
                         ),
                       );
                     },

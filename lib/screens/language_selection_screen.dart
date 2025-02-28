@@ -37,31 +37,35 @@ class LanguageSelectionScreen extends StatelessWidget {
           // 상단 설명 영역
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
             decoration: BoxDecoration(
               color: Colors.indigo,
-              border: Border.all(
-                color: Colors.indigo,
-                width: 1,
-              ),
             ),
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  '원하는 언어를 선택하세요',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+              children: [
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(Icons.language, color: Colors.white, size: 24),
+                    const SizedBox(width: 12),
+                    const Text(
+                      '원하는 언어를 선택하세요',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Text(
-                  '작성된 근로계약서를 선택한 언어로 확인할 수 있습니다',
+                  '작성된 근로계약서를 선택한 언어로 확인하고 음성듣기 및 PDF로 변환할 수 있습니다.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white70,
+                    color: Colors.white.withOpacity(0.9),
+                    height: 1.5,
                   ),
                 ),
               ],
@@ -186,12 +190,30 @@ class LanguageSelectionScreen extends StatelessWidget {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => WorkerListScreen(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => WorkerListScreen(
           langCode: langCode,
           contracts: contracts.map((e) => json.decode(e)).toList(),
         ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0); // 아래에서 위로 올라오는 효과
+          const end = Offset.zero;
+          const curve = Curves.easeOutCubic;
+
+          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+
+          return SlideTransition(
+            position: offsetAnimation,
+            child: FadeTransition(
+              opacity: animation,
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 200),
       ),
     );
   }
 }
+

@@ -24,9 +24,38 @@ class WorkerListScreen extends StatelessWidget {
     return groups;
   }
 
+  // 언어 코드에 따른 언어명 반환
+  String getLanguageName() {
+    switch (langCode) {
+      case 'ko':
+        return '한국어';
+      case 'en':
+        return '영어 (English)';
+      case 'vi':
+        return '베트남어 (Tiếng Việt)';
+      default:
+        return '한국어';
+    }
+  }
+
+  // 언어 코드에 따른 색상 반환
+  Color getLanguageColor() {
+    switch (langCode) {
+      case 'ko':
+        return Colors.indigo;
+      case 'en':
+        return Colors.teal;
+      case 'vi':
+        return Colors.deepPurple;
+      default:
+        return Colors.indigo;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final workerGroups = groupContractsByWorker(contracts);
+    final languageColor = getLanguageColor();
 
     return Scaffold(
       backgroundColor: Colors.indigo[50],
@@ -89,6 +118,57 @@ class WorkerListScreen extends StatelessWidget {
             ),
           ),
 
+          // 선택된 언어 표시 영역 (새로 추가)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              color: languageColor.withOpacity(0.1),
+              border: Border(
+                bottom: BorderSide(
+                  color: languageColor.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: languageColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.language, color: Colors.white, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        getLanguageName(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '선택된 언어로 계약서가 표시됩니다',
+                    style: TextStyle(
+                      color: languageColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // 근로자 목록
           Expanded(
             child: workerGroups.isEmpty
@@ -110,18 +190,20 @@ class WorkerListScreen extends StatelessWidget {
   }
 
   Widget _buildWorkerContractItem(BuildContext context, dynamic workerContract, String langCode) {
+    final languageColor = getLanguageColor();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.indigo.withOpacity(0.5),
+          color: languageColor.withOpacity(0.5),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.indigo.withOpacity(0.1),
+            color: languageColor.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 3),
@@ -135,11 +217,28 @@ class WorkerListScreen extends StatelessWidget {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => ContractDetailScreen(
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => ContractDetailScreen(
                   langCode: langCode,
                   contract: workerContract,
                 ),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  const begin = Offset(0.0, 1.0); // 아래에서 위로 올라오는 효과
+                  const end = Offset.zero;
+                  const curve = Curves.easeOutCubic;
+
+                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  var offsetAnimation = animation.drive(tween);
+
+                  return SlideTransition(
+                    position: offsetAnimation,
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    ),
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 200),
               ),
             );
           },
@@ -151,10 +250,10 @@ class WorkerListScreen extends StatelessWidget {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withOpacity(0.1),
+                    color: languageColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.person, size: 28, color: Colors.indigo),
+                  child: Icon(Icons.person, size: 28, color: languageColor),
                 ),
                 const SizedBox(width: 20),
                 Expanded(
@@ -163,23 +262,45 @@ class WorkerListScreen extends StatelessWidget {
                     children: [
                       Text(
                         workerContract['workerName']['korean'],
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.indigo,
+                          color: languageColor,
                         ),
                       ),
                       if (langCode != 'ko') ...[
                         const SizedBox(height: 4),
-                        Text(
-                          workerContract['workerName'][
-                          langCode == 'en' ? 'english' :
-                          langCode == 'vi' ? 'vietnamese' : 'korean'
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: languageColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                langCode == 'en' ? 'EN' : langCode == 'vi' ? 'VI' : 'KO',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: languageColor,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                workerContract['workerName'][
+                                langCode == 'en' ? 'english' :
+                                langCode == 'vi' ? 'vietnamese' : 'korean'
+                                ],
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ),
                           ],
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
                         ),
                       ],
                     ],
@@ -187,7 +308,7 @@ class WorkerListScreen extends StatelessWidget {
                 ),
                 Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.indigo,
+                  color: languageColor,
                   size: 16,
                 ),
               ],
@@ -199,6 +320,8 @@ class WorkerListScreen extends StatelessWidget {
   }
 
   Widget _buildEmptyState() {
+    final languageColor = getLanguageColor();
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -206,14 +329,14 @@ class WorkerListScreen extends StatelessWidget {
           Icon(
             Icons.document_scanner_outlined,
             size: 80,
-            color: Colors.indigo[200],
+            color: languageColor.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           Text(
             '저장된 근로계약서가 없습니다',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.indigo[400],
+              color: languageColor,
               fontWeight: FontWeight.w500,
             ),
           ),
