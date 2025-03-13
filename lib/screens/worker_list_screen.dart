@@ -238,7 +238,7 @@ class WorkerListScreen extends StatelessWidget {
                     ),
                   );
                 },
-                transitionDuration: const Duration(milliseconds: 200),
+                transitionDuration: const Duration(milliseconds: 300),
               ),
             );
           },

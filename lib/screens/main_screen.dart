@@ -154,7 +154,7 @@ class MainScreen extends StatelessWidget {
                               child: child,
                             );
                           },
-                          transitionDuration: const Duration(milliseconds: 200),
+                          transitionDuration: const Duration(milliseconds: 300),
                         ),
                       );
                     },

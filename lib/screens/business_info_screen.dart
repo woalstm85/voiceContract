@@ -1,11 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import './main_screen.dart';
 
 class BusinessInfoScreen extends StatefulWidget {
-  const BusinessInfoScreen({Key? key}) : super(key: key);
+  final bool isEditing;
+
+  const BusinessInfoScreen({Key? key, this.isEditing = false}) : super(key: key);
 
   @override
   State<BusinessInfoScreen> createState() => _BusinessInfoScreenState();
@@ -21,6 +24,88 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
   File? _businessImage;
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  String? _currentImagePath;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEditing) {
+      _loadBusinessInfo();
+    }
+  }
+
+  Future<void> _loadBusinessInfo() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // 현재 로그인된 이메일 가져오기
+      String currentEmail = prefs.getString('userEmail') ?? '';
+
+      // 저장된 사업자 정보 가져오기
+      String businessNumber = prefs.getString('businessNumber_$currentEmail') ?? '';
+      String ownerName = prefs.getString('ownerName_$currentEmail') ?? '';
+      String businessType = prefs.getString('businessType_$currentEmail') ?? '';
+      String businessCategory = prefs.getString('businessCategory_$currentEmail') ?? '';
+      _currentImagePath = prefs.getString('businessImagePath_$currentEmail');
+
+      // 사업자번호 포맷팅
+      if (businessNumber.isNotEmpty) {
+        _businessNumberController.text = _formatBusinessNumber(businessNumber);
+      } else {
+        _businessNumberController.text = businessNumber;
+      }
+
+      _ownerNameController.text = ownerName;
+      _businessTypeController.text = businessType;
+      _businessCategoryController.text = businessCategory;
+
+      // 이미지 경로가 있으면 이미지 로드
+      if (_currentImagePath != null && _currentImagePath!.isNotEmpty) {
+        _businessImage = File(_currentImagePath!);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('정보 로드 중 오류가 발생했습니다: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // 사업자번호 포맷팅 함수
+  String _formatBusinessNumber(String value) {
+    value = value.replaceAll('-', ''); // 기존 대시 제거
+
+    if (value.length > 10) {
+      value = value.substring(0, 10); // 최대 10자리로 제한
+    }
+
+    // 포맷팅: XXX-XX-XXXXX
+    if (value.length >= 3) {
+      String first = value.substring(0, 3);
+      String rest = value.substring(3);
+
+      if (rest.length >= 2) {
+        String second = rest.substring(0, 2);
+        String third = rest.substring(2);
+        return '$first-$second-$third';
+      } else {
+        return '$first-$rest';
+      }
+    }
+
+    return value;
+  }
 
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -49,6 +134,9 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
       });
 
       try {
+        // 사업자번호에서 하이픈 제거 (저장 시)
+        String businessNumber = _businessNumberController.text.replaceAll('-', '');
+
         // Shared Preferences에 사업자 정보 저장
         final prefs = await SharedPreferences.getInstance();
 
@@ -56,7 +144,7 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
         String currentEmail = prefs.getString('userEmail') ?? '';
 
         // 이메일별로 사업자 정보 저장
-        await prefs.setString('businessNumber_$currentEmail', _businessNumberController.text);
+        await prefs.setString('businessNumber_$currentEmail', businessNumber);
         await prefs.setString('ownerName_$currentEmail', _ownerNameController.text);
         await prefs.setString('businessType_$currentEmail', _businessTypeController.text);
         await prefs.setString('businessCategory_$currentEmail', _businessCategoryController.text);
@@ -70,12 +158,16 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
         await Future.delayed(const Duration(milliseconds: 800));
 
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const MainScreen(),
-            ),
-          );
+          if (widget.isEditing) {
+            Navigator.pop(context); // 수정 모드일 경우 이전 화면으로 돌아감
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MainScreen(),
+              ),
+            );
+          }
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,13 +194,23 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading && widget.isEditing) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Colors.indigo,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          '사업자 정보 입력',
-          style: TextStyle(
+        title: Text(
+          widget.isEditing ? '사업자 정보 수정' : '사업자 정보 입력',
+          style: const TextStyle(
             color: Colors.indigo,
             fontWeight: FontWeight.w600,
             fontSize: 20,
@@ -136,9 +238,9 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
                     children: [
                       const Icon(Icons.business, color: Colors.white, size: 24),
                       const SizedBox(width: 12),
-                      const Text(
-                        '사업자 정보 등록',
-                        style: TextStyle(
+                      Text(
+                        widget.isEditing ? '사업자 정보 수정' : '사업자 정보 등록',
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -181,6 +283,20 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
                         return null;
                       },
                       keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        // 사업자번호 입력 시 자동 포맷팅
+                        String formattedNumber = _formatBusinessNumber(value);
+                        if (formattedNumber != value) {
+                          _businessNumberController.value = TextEditingValue(
+                            text: formattedNumber,
+                            selection: TextSelection.collapsed(offset: formattedNumber.length),
+                          );
+                        }
+                      },
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(12), // "000-00-00000" 형식으로 최대 12자
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')), // 숫자와 하이픈만 허용
+                      ],
                     ),
                     const SizedBox(height: 20),
 
@@ -297,8 +413,8 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
                     Center(
                       child: TextButton.icon(
                         onPressed: _takePhoto,
-                        icon: Icon(Icons.photo_camera, color: Colors.indigo),
-                        label: Text(
+                        icon: const Icon(Icons.photo_camera, color: Colors.indigo),
+                        label: const Text(
                           '카메라로 촬영하기',
                           style: TextStyle(
                             color: Colors.indigo,
@@ -332,9 +448,9 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
                             strokeWidth: 2.5,
                           ),
                         )
-                            : const Text(
-                          '확인',
-                          style: TextStyle(
+                            : Text(
+                          widget.isEditing ? '저장' : '확인',
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'NanumGothic',
@@ -358,6 +474,8 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
     required String hint,
     required String? Function(String?) validator,
     TextInputType keyboardType = TextInputType.text,
+    void Function(String)? onChanged,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,6 +534,8 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
           style: const TextStyle(
             fontFamily: 'NanumGothic',
           ),
+          onChanged: onChanged,
+          inputFormatters: inputFormatters,
         ),
       ],
     );
