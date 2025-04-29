@@ -29,6 +29,7 @@ dependencies:
   flutter_dotenv: ^5.2.1
   google_sign_in: ^6.2.1
   image_picker: ^1.0.7
+  animate_do: ^4.2.0
 
 dev_dependencies:
   flutter_test:
@@ -65,4 +66,5 @@ flutter:
     - assets/config.json
     - assets/voice_service_account.json
     - assets/google_logo.png
+    - assets/images/
     - .env

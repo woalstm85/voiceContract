@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'worker_list_screen.dart';
 import 'dart:convert';
+import 'package:animate_do/animate_do.dart';
 
 class LanguageSelectionScreen extends StatelessWidget {
   final bool isViewMode;
@@ -15,95 +16,174 @@ class LanguageSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.indigo[50],
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        title: const Text(
+      appBar: _buildAppBar(context),
+      body: Column(
+        children: [
+          _buildHeader(context),
+          Expanded(
+            child: _buildLanguageButtons(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      elevation: 0,
+      centerTitle: true,
+      backgroundColor: Colors.white,
+      title: FadeIn(
+        child: const Text(
           '언어 선택',
           style: TextStyle(
             color: Colors.indigo,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w900,
             fontSize: 20,
+            letterSpacing: 1.2,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.indigo),
-          onPressed: () => Navigator.pop(context),
+      ),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios, color: Colors.indigo),
+        onPressed: () => Navigator.pop(context),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.indigo, Colors.indigoAccent],
         ),
       ),
-      body: Column(
-        children: [
-          // 상단 설명 영역
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.indigo,
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+      child: FadeInDown(
+        delay: const Duration(milliseconds: 200),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Icon(Icons.language, color: Colors.white, size: 24),
-                    const SizedBox(width: 12),
-                    const Text(
-                      '원하는 언어를 선택하세요',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                _buildLanguageIcons(),
+                const SizedBox(width: 12),
                 Text(
-                  '작성된 근로계약서를 선택한 언어로 확인하고 음성듣기 및 PDF로 변환할 수 있습니다.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
-                    height: 1.5,
+                  '언어를 선택하세요',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 1.1,
                   ),
                 ),
               ],
             ),
-          ),
-
-          // 언어 선택 버튼 영역
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildLanguageButton(
-                    context,
-                    '한국어',
-                    'ko',
-                    Colors.indigo,
-                    Icons.language,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildLanguageButton(
-                    context,
-                    '영어 (English)',
-                    'en',
-                    Colors.teal,
-                    Icons.language,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildLanguageButton(
-                    context,
-                    '베트남어 (Tiếng Việt)',
-                    'vi',
-                    Colors.deepPurple,
-                    Icons.language,
-                  ),
-                ],
+            const SizedBox(height: 16),
+            Text(
+              '선택한 언어로 계약서를 확인하고, 음성 듣기 및 PDF 변환 기능을 사용할 수 있습니다.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white.withOpacity(0.9),
+                height: 1.6,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageIcons() {
+    return SizedBox(
+      width: 55,
+      height: 28,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            bottom: 4,
+            child: _buildHeaderFlagIcon('assets/images/korean_flag.png'), // 변경된 함수 호출
+          ),
+          Positioned(
+            left: 16,
+            bottom: 4,
+            child: _buildHeaderFlagIcon('assets/images/usa_flag.png'), // 변경된 함수 호출
+          ),
+          Positioned(
+            left: 32,
+            bottom: 4,
+            child: _buildHeaderFlagIcon('assets/images/vietnam_flag.png'), // 변경된 함수 호출
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 상단 겹치는 국기 아이콘 위젯 (테두리 제거)
+  Widget _buildHeaderFlagIcon(String imagePath) {
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        // 테두리 제거
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: Image.asset(
+          imagePath,
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageButtons(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FadeInLeft(
+            delay: const Duration(milliseconds: 400),
+            child: _buildLanguageButton(
+              context,
+              '한국어',
+              'ko',
+              Colors.indigo,
+              'assets/images/korean_flag.png',
+            ),
+          ),
+          const SizedBox(height: 20),
+          FadeInRight(
+            delay: const Duration(milliseconds: 600),
+            child: _buildLanguageButton(
+              context,
+              '영어 (English)',
+              'en',
+              Colors.teal,
+              'assets/images/usa_flag.png',
+            ),
+          ),
+          const SizedBox(height: 20),
+          FadeInLeft(
+            delay: const Duration(milliseconds: 800),
+            child: _buildLanguageButton(
+              context,
+              '베트남어 (Tiếng Việt)',
+              'vi',
+              Colors.deepPurple,
+              'assets/images/vietnam_flag.png',
             ),
           ),
         ],
@@ -116,56 +196,66 @@ class LanguageSelectionScreen extends StatelessWidget {
       String label,
       String langCode,
       Color color,
-      IconData icon,
+      String flagImagePath,
       ) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.5),
-          width: 1.5,
+    return InkWell(
+      onTap: () => _onLanguageSelected(context, langCode),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+          border: Border.all(
+            color: color.withOpacity(0.5), // 기존 테두리 유지
+            width: 1.5,
+          ),
         ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _onLanguageSelected(context, langCode),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-            child: Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+        child: Row(
+          children: [
+            Container(
+              width: 55,
+              height: 55,
+              child: Center(
+                child: ClipOval(  // 기존처럼 둥글게 유지
+                  child: Image.asset(
+                    flagImagePath,
+                    width: 38,
+                    height: 38,
+                    fit: BoxFit.cover,
                   ),
-                  child: Icon(icon, size: 28, color: color),
                 ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Text(
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     label,
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
                       color: color,
                     ),
                   ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: color,
-                  size: 16,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: color,
+              size: 20,
+            ),
+          ],
         ),
       ),
     );
@@ -188,15 +278,29 @@ class LanguageSelectionScreen extends StatelessWidget {
       return;
     }
 
+    String flagImagePath = '';
+    switch (langCode) {
+      case 'ko':
+        flagImagePath = 'assets/images/korean_flag.png';
+        break;
+      case 'en':
+        flagImagePath = 'assets/images/usa_flag.png';
+        break;
+      case 'vi':
+        flagImagePath = 'assets/images/vietnam_flag.png';
+        break;
+    }
+
     Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => WorkerListScreen(
           langCode: langCode,
           contracts: contracts.map((e) => json.decode(e)).toList(),
+          flagImagePath: flagImagePath,
         ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(0.0, 1.0); // 아래에서 위로 올라오는 효과
+          const begin = Offset(0.0, 1.0);
           const end = Offset.zero;
           const curve = Curves.easeOutCubic;
 
@@ -211,9 +315,8 @@ class LanguageSelectionScreen extends StatelessWidget {
             ),
           );
         },
-        transitionDuration: const Duration(milliseconds: 300),
+        transitionDuration: const Duration(milliseconds: 100),
       ),
     );
   }
 }
-
