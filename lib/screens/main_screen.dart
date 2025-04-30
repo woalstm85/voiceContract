@@ -20,7 +20,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 300),
     );
     _animationController.forward(); // 애니메이션 시작
   }
@@ -149,7 +149,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 24),
           FadeInRight( // 애니메이션 적용
-            delay: const Duration(milliseconds: 400),
+            delay: const Duration(milliseconds: 300),
             child: _buildMenuButton(
               context,
               title: '기존 계약서 조회', // 제목 변경
@@ -247,7 +247,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   // 하단 푸터 위젯
   Widget _buildFooter() {
     return FadeInUp( // 애니메이션 적용
-      delay: const Duration(milliseconds: 500),
+      delay: const Duration(milliseconds: 300),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 20), // 패딩 조정
