@@ -6,9 +6,9 @@ import 'package:animate_do/animate_do.dart';
 import 'package:contact/screens/models/contract_section.dart';
 import 'package:contact/screens/services/speech_recognition_service.dart';
 import 'package:contact/screens/services/audio_player_service.dart';
-import 'package:contact/screens/widgets/section_header.dart';
 import 'package:contact/screens/widgets/section_content.dart';
 import 'package:contact/screens/utils/snackbar_utils.dart';
+import 'package:contact/widgets/wave_pulse_loading.dart';
 
 class SpeechRecognitionScreen extends StatefulWidget {
   const SpeechRecognitionScreen({Key? key}) : super(key: key);
@@ -36,6 +36,8 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
 
   // 컴포넌트가 마운트 상태인지 확인하기 위한 변수
   bool _isMounted = false;
+
+  bool _isTranslating = false;
 
   // 각 섹션의 GlobalKey 리스트 (자동 스크롤 위해)
   final List<GlobalKey> _sectionKeys = [];
@@ -81,8 +83,16 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
           if (vietnameseText.isNotEmpty) {
             _sections[index].vietnameseText = vietnameseText;
           }
+
+          // 모든 언어가 번역 완료되면 완료 상태로 변경 및 로딩 숨기기
           if (koreanText.isNotEmpty && englishText.isNotEmpty && vietnameseText.isNotEmpty) {
             _sections[index].isCompleted = true;
+
+            // 번역 중 상태였으면 로딩 숨기기
+            if (_isTranslating) {
+              _isTranslating = false;
+              context.hideWavePulseLoading();
+            }
           }
         }
       });
@@ -156,6 +166,12 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
           _sections[index].vietnameseText = '';
         }
       });
+
+      // 녹음 시작 시 로딩 표시
+      if (_isMounted) {
+        setState(() => _isTranslating = true);
+        context.showWavePulseLoading(message: '음성 인식 중...');
+      }
     } else {
       if (_isMounted) {
         showSnackBar(context, '녹음을 시작할 수 없습니다');
@@ -179,6 +195,13 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
           _sections[index].vietnameseText = '';
         }
       });
+
+      // 로딩 숨기기
+      if (_isTranslating) {
+        _isTranslating = false;
+        context.hideWavePulseLoading();
+      }
+
       if (_isMounted) {
         showSnackBar(context, '음성이 인식되지 않았습니다', seconds: 2);
       }
@@ -193,6 +216,12 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
           _sections[index].audioFilePath = _voiceService.lastRecordingPath;
         }
       });
+
+      // 녹음은 중지되었지만 번역이 아직 진행 중이면 로딩 메시지 업데이트
+      if (_isTranslating) {
+        context.hideWavePulseLoading();
+        context.showWavePulseLoading(message: '번역 중...');
+      }
     }
   }
 
@@ -607,6 +636,16 @@ class _SpeechRecognitionScreenState extends State<SpeechRecognitionScreen> {
   @override
   void dispose() {
     _isMounted = false;
+
+    // 화면 종료 시 로딩 숨기기 시도
+    if (_isTranslating) {
+      try {
+        context.hideWavePulseLoading();
+      } catch (e) {
+        // 이미 컨텍스트가 없을 수 있으므로 에러 무시
+      }
+    }
+
     _voiceService.dispose();
     _audioPlayerService.dispose();
     flutterTts.stop();

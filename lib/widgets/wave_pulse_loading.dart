@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 class WavePulseLoading extends StatefulWidget {
   final String? message;
@@ -7,7 +8,7 @@ class WavePulseLoading extends StatefulWidget {
   const WavePulseLoading({
     Key? key,
     this.message = '음성 번역 중',
-    this.baseColor = const Color(0xFF2196F3), // 더 강한 파란색 사용
+    this.baseColor = const Color(0xFF3F51B5), // 인디고 색상 사용
   }) : super(key: key);
 
   @override
@@ -16,120 +17,142 @@ class WavePulseLoading extends StatefulWidget {
 
 class _WavePulseLoadingState extends State<WavePulseLoading> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _animation;
+  late List<double> _barHeights;
+  final int _barCount = 7; // 음성 파형 막대 개수
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
-    )..repeat(reverse: false);
+    )..repeat();
 
-    _animation = Tween<double>(begin: 0.5, end: 1.5).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
-    );
+    // 막대 높이 초기화 (랜덤 값으로)
+    _initializeBarHeights();
+
+    // 애니메이션 리스너 추가
+    _controller.addListener(_updateBarHeights);
+  }
+
+  void _initializeBarHeights() {
+    final random = math.Random();
+    _barHeights = List.generate(_barCount, (_) => random.nextDouble() * 0.7 + 0.3);
+  }
+
+  void _updateBarHeights() {
+    if (mounted) {
+      setState(() {
+        final random = math.Random();
+        for (var i = 0; i < _barCount; i++) {
+          // 애니메이션 진행 상태에 따라 막대 높이 업데이트
+          if (random.nextDouble() > 0.7) {
+            _barHeights[i] = random.nextDouble() * 0.7 + 0.3;
+          }
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color waveColor = widget.baseColor ?? Colors.blue;
+    final Color waveColor = widget.baseColor ?? const Color(0xFF3F51B5);
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 어두운 배경으로 변경하여 파동 효과가 더 잘 보이게 함
+        // 어두운 배경 (약간 투명하게)
         Container(
           color: Colors.black.withOpacity(0.3),
         ),
 
-        // 파동 효과 및 중앙 컨텐츠
+        // 중앙 컨텐츠
         Center(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  // 세 번째 파동 (더 큰 파동 추가)
-                  Container(
-                    width: 250 * _animation.value,
-                    height: 250 * _animation.value,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: waveColor.withOpacity(
-                          (1.0 - _animation.value).clamp(0.0, 1.0) * 0.3
-                      ),
-                    ),
-                  ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 아이콘
+                Icon(
+                  Icons.mic, // 음성 인식에 더 적합한 아이콘
+                  color: waveColor,
+                  size: 40,
+                ),
+                const SizedBox(height: 20),
 
-                  // 두 번째 파동 (더 선명하게 만듦)
-                  Container(
-                    width: 200 * _animation.value,
-                    height: 200 * _animation.value,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: waveColor.withOpacity(
-                          (1.0 - _animation.value).clamp(0.0, 1.0) * 0.5
+                // 음성 파형 효과
+                SizedBox(
+                  height: 60,
+                  width: 200,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: List.generate(
+                      _barCount,
+                          (index) => AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, child) {
+                          return _buildBar(index, waveColor);
+                        },
                       ),
                     ),
                   ),
+                ),
 
-                  // 첫 번째 파동 (더 선명하게 만듦)
-                  Container(
-                    width: 150 * _animation.value,
-                    height: 150 * _animation.value,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: waveColor.withOpacity(
-                          (1.0 - _animation.value).clamp(0.0, 1.0) * 0.7
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: 20),
 
-                  // 중앙 내용 배경 (더 불투명하게 만듦)
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.85),
-                      // 테두리 추가하여 더 잘 보이게 함
-                      border: Border.all(
-                        color: waveColor.withOpacity(0.8),
-                        width: 2.0,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.g_translate,
-                          color: waveColor,
-                          size: 40,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          widget.message!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: waveColor.withBlue(waveColor.blue - 40),
-                            fontWeight: FontWeight.bold, // 텍스트 굵게 표시
-                            fontSize: 12,
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
-                      ],
-                    ),
+                // 메시지
+                Text(
+                  widget.message!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    decoration: TextDecoration.none,
                   ),
-                ],
-              );
-            },
+                ),
+
+                const SizedBox(height: 8),
+
+                // 부가 설명
+                Text(
+                  '잠시만 기다려주세요',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBar(int index, Color color) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: 15,
+      height: 60 * _barHeights[index],
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(3),
+      ),
     );
   }
 

@@ -63,7 +63,7 @@ class LanguageSelectionScreen extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       child: FadeInDown(
-        delay: const Duration(milliseconds: 200),
+        delay: const Duration(milliseconds: 150),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -155,7 +155,7 @@ class LanguageSelectionScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           FadeInLeft(
-            delay: const Duration(milliseconds: 400),
+            delay: const Duration(milliseconds: 100),
             child: _buildLanguageButton(
               context,
               '한국어',
@@ -166,7 +166,7 @@ class LanguageSelectionScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           FadeInRight(
-            delay: const Duration(milliseconds: 600),
+            delay: const Duration(milliseconds: 150),
             child: _buildLanguageButton(
               context,
               '영어 (English)',
@@ -177,7 +177,7 @@ class LanguageSelectionScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           FadeInLeft(
-            delay: const Duration(milliseconds: 800),
+            delay: const Duration(milliseconds: 200),
             child: _buildLanguageButton(
               context,
               '베트남어 (Tiếng Việt)',

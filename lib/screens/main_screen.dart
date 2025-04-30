@@ -64,7 +64,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       centerTitle: true,
       title: FadeIn( // 애니메이션 적용
         child: const Text(
-          'Voice Contract',
+          '말로하는 계약서',
           style: TextStyle(
             color: Colors.indigo,
             fontWeight: FontWeight.w900, // 더 굵게
@@ -132,7 +132,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           FadeInLeft( // 애니메이션 적용
-            delay: const Duration(milliseconds: 400),
+            delay: const Duration(milliseconds: 200),
             child: _buildMenuButton(
               context,
               title: '새로운 계약서 작성', // 제목 변경
@@ -149,7 +149,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 24),
           FadeInRight( // 애니메이션 적용
-            delay: const Duration(milliseconds: 600),
+            delay: const Duration(milliseconds: 400),
             child: _buildMenuButton(
               context,
               title: '기존 계약서 조회', // 제목 변경
@@ -247,7 +247,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   // 하단 푸터 위젯
   Widget _buildFooter() {
     return FadeInUp( // 애니메이션 적용
-      delay: const Duration(milliseconds: 800),
+      delay: const Duration(milliseconds: 500),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 20), // 패딩 조정

@@ -83,6 +83,7 @@ class _WorkerListScreenState extends State<WorkerListScreen> {
     return AppBar(
       elevation: 0,
       centerTitle: true,
+      scrolledUnderElevation: 0,
       backgroundColor: Colors.white,
       title: FadeIn(
         child: const Text(
@@ -111,7 +112,7 @@ class _WorkerListScreenState extends State<WorkerListScreen> {
   Widget _buildHeader(BuildContext context, Color languageColor) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -120,26 +121,26 @@ class _WorkerListScreenState extends State<WorkerListScreen> {
         ),
       ),
       child: FadeInDown(
-        delay: const Duration(milliseconds: 200),
+        delay: const Duration(milliseconds: 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               '저장된 근로계약서',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 letterSpacing: 1.1,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
             Text(
               '선택한 언어로 번역되어 근로계약서 상세 내용을 확인할 수 있습니다.',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 color: Colors.white.withOpacity(0.9),
-                height: 1.6,
+                height: 1.2,
               ),
             ),
           ],
@@ -217,7 +218,7 @@ class _WorkerListScreenState extends State<WorkerListScreen> {
           final workerContract = workerGroups[koreanName]!.first;
 
           return FadeInUp(
-            delay: Duration(milliseconds: 100 + index * 100),
+            delay: Duration(milliseconds: 50 + index * 50),
             child: _buildWorkerContractItem(context, workerContract, langCode),
           );
         },
