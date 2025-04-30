@@ -46,12 +46,7 @@ flutter_icons:
   adaptive_icon_background: "#FFFFFF"  # 배경색 설정 가능
   adaptive_icon_foreground: "assets/app_icon_padded.png"  # 안드로이드 어댑티브 아이콘
 
-flutter_native_splash:
-  color: "#3F51B5"  # 배경색 설정
-  image: "assets/splash_icon.png"
-  android_12:
-    image: "assets/splash_icon.png"
-    icon_background_color: "#FFFFFF"
+
 
 flutter:
 
@@ -67,4 +62,5 @@ flutter:
     - assets/voice_service_account.json
     - assets/google_logo.png
     - assets/images/
+    - assets/splash_icon.png
     - .env

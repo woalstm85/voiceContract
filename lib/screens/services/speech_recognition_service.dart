@@ -53,9 +53,13 @@ class VoiceRecognitionService {
 
   // Speech-to-Text 초기화
   Future<void> _initSpeechToText() async {
-    final String jsonString = await rootBundle.loadString('assets/voice_service_account.json');
-    final serviceAccount = ServiceAccount.fromString(jsonString);
-    _speechToText = SpeechToText.viaServiceAccount(serviceAccount);
+    try {
+      final String jsonString = await rootBundle.loadString('assets/voice_service_account.json');
+      final serviceAccount = ServiceAccount.fromString(jsonString);
+      _speechToText = SpeechToText.viaServiceAccount(serviceAccount);
+    } catch (e) {
+      print('Speech-to-Text 초기화 오류: $e');
+    }
   }
 
   // 녹음 파일 경로 생성
@@ -67,6 +71,10 @@ class VoiceRecognitionService {
 
   // 녹음 시작
   Future<bool> startRecording(String sectionId, String workerName) async {
+    if (_isRecording) {
+      await stopRecording();
+    }
+
     try {
       if (await Permission.microphone.request().isGranted) {
         final audioPath = await _getAudioFilePath(sectionId, workerName);
@@ -100,8 +108,18 @@ class VoiceRecognitionService {
 
   // 녹음 중지
   Future<void> stopRecording() async {
+    if (!_isRecording) {
+      return;
+    }
+
     try {
+      // 녹음 상태 즉시 업데이트
       _isRecording = false;
+
+      // 무음 타이머 즉시 취소
+      _silenceTimer?.cancel();
+      _silenceTimer = null;
+
       final path = await _audioRecorder.stop();
 
       if (path == null) {
@@ -115,6 +133,9 @@ class VoiceRecognitionService {
         // 무음으로 인한 중지는 더 이상 처리하지 않음
         return;
       }
+
+      // 인식 진행 중임을 알림
+      _notifyRecognitionResult(_currentSectionId, "처리 중...", "번역 중...", "번역 중...");
 
       // 음성 처리 시작
       await _processAudio(File(path), _currentSectionId);
@@ -131,7 +152,7 @@ class VoiceRecognitionService {
     const int maxSilenceAfterSpeech = 3;
 
     _silenceTimer?.cancel();
-    _silenceTimer = Timer.periodic(Duration(milliseconds: 500), (timer) async {
+    _silenceTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
       if (!_isRecording) {
         timer.cancel();
         return;
@@ -178,7 +199,6 @@ class VoiceRecognitionService {
   }
 
   // 오디오 처리 및 번역
-// 오디오 처리 및 번역
   Future<void> _processAudio(File audioFile, String sectionId) async {
     try {
       final audio = await audioFile.readAsBytes();
@@ -194,6 +214,7 @@ class VoiceRecognitionService {
       final speechToText = _speechToText;
       if (speechToText == null) {
         print('Speech-to-Text 초기화되지 않음');
+        _notifyRecognitionResult(sectionId, "Speech-to-Text 초기화되지 않음", "", "");
         return;
       }
 
@@ -203,6 +224,7 @@ class VoiceRecognitionService {
       // 인식 결과 검증
       if (response.results.isEmpty) {
         print('음성을 인식할 수 없습니다');
+        _notifyRecognitionResult(sectionId, "음성을 인식할 수 없습니다", "", "");
         return;
       }
 
@@ -213,20 +235,30 @@ class VoiceRecognitionService {
 
       if (recognizedText.isEmpty) {
         print('인식된 텍스트가 없습니다');
+        _notifyRecognitionResult(sectionId, "인식된 텍스트가 없습니다", "", "");
         return;
       }
 
-      // 한국어 텍스트 인식 즉시 UI에 표시 (번역 전)
-      _notifyRecognitionResult(sectionId, recognizedText, "번역 중...", "번역 중...");
+      // 인식된 한국어 텍스트 저장
+      final String koreanText = recognizedText;
 
-      // 번역 시작
-      final englishText = await _translationService.translate(recognizedText, 'en');
-      final vietnameseText = await _translationService.translate(recognizedText, 'vi');
+      // 번역 전에 먼저 빈 텍스트 대신 인식된 한국어만 표시
+      _notifyRecognitionResult(sectionId, koreanText, "번역 중...", "번역 중...");
 
-      // 번역 완료 후 최종 결과 업데이트
-      _notifyRecognitionResult(sectionId, recognizedText, englishText, vietnameseText);
+      // 번역 시작 (병렬 처리)
+      final englishFuture = _translationService.translate(koreanText, 'en');
+      final vietnameseFuture = _translationService.translate(koreanText, 'vi');
+
+      // 모든 번역이 완료될 때까지 기다림
+      final results = await Future.wait([englishFuture, vietnameseFuture]);
+      final englishText = results[0];
+      final vietnameseText = results[1];
+
+      // 번역 완료 후 전체 결과 업데이트
+      _notifyRecognitionResult(sectionId, koreanText, englishText, vietnameseText);
     } catch (e) {
       print('음성 처리 오류: $e');
+      _notifyRecognitionResult(sectionId, "음성 처리 중 오류가 발생했습니다", "", "");
     }
   }
 
